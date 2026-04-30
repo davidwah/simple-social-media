@@ -1,5 +1,5 @@
-FROM ubuntu:22.04 
-#RUN df -h
+FROM ubuntu:22.04
+
 RUN apt update -y && \
     DEBIAN_FRONTEND=noninteractive apt install -y apache2 \
     php \
@@ -33,7 +33,7 @@ RUN mkdir -p bootstrap/cache \
     chmod -R ug+rwx bootstrap storage
 
 RUN chmod +x install.sh && ./install.sh
-RUN df -h
+
 RUN chown -R www-data:www-data /var/www/sosmed && \
     chmod -R 755 /var/www/sosmed
 

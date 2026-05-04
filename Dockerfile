@@ -1,41 +1,41 @@
-# ========================
-# Stage 1: Build
-# ========================
-FROM composer:2 AS builder
+FROM ubuntu:22.04
 
-WORKDIR /app
-COPY . .
-
-RUN composer install --no-dev --optimize-autoloader
-
-# ========================
-# Stage 2: Runtime
-# ========================
-FROM php:8.2-cli
-
-RUN apt-get update && apt-get install -y \
+RUN apt update -y && \
+    DEBIAN_FRONTEND=noninteractive apt install -y apache2 \
+    php \
+    npm \
+    php-xml \
+    php-mbstring \
+    php-curl \
+    php-mysql \
+    php-gd \
     unzip \
-    git \
-    curl \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    zip \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+    nano  \
+    curl && \
+    rm -rf /var/lib/apt/lists/*
 
-# install composer (copy dari builder)
-COPY --from=builder /usr/bin/composer /usr/bin/composer
+RUN curl -sS https://getcomposer.org/installer -o composer-setup.php && \
+    php composer-setup.php --install-dir=/usr/local/bin --filename=composer
 
-WORKDIR /var/www
+RUN mkdir -p /var/www/sosmed
+WORKDIR /var/www/sosmed
 
-COPY --from=builder /app /var/www
+ADD . /var/www/sosmed
+ADD sosmed.conf /etc/apache2/sites-available/
 
-# permission Laravel
-RUN chown -R www-data:www-data /var/www \
-    && chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+RUN a2dissite 000-default.conf && a2ensite sosmed.conf
 
-USER www-data
+RUN mkdir -p bootstrap/cache \
+    storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views && \
+    chown -R www-data:www-data bootstrap storage && \
+    chmod -R ug+rwx bootstrap storage
+
+RUN chmod +x install.sh && ./install.sh
+
+RUN chown -R www-data:www-data /var/www/sosmed && \
+    chmod -R 755 /var/www/sosmed
 
 EXPOSE 8000
-
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+CMD php artisan serve --host=0.0.0.0 --port=8000
